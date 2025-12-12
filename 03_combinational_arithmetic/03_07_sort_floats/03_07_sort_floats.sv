@@ -86,5 +86,49 @@ module sort_three_floats (
     // The FLEN parameter is defined in the "import/preprocessed/cvw/config-shared.vh" file
     // and usually equal to the bit width of the double-precision floating-point number, FP64, 64 bits.
 
+    logic err_01;
+    logic err_02;
+    logic err_12;
 
+    logic u0_less_or_equal_u1;
+    logic u0_less_or_equal_u2;
+    logic u1_less_or_equal_u2;
+
+    f_less_or_equal i_floe_01
+    (
+        .a   ( unsorted [0]        ),
+        .b   ( unsorted [1]        ),
+        .res ( u0_less_or_equal_u1 ),
+        .err ( err_01              )
+    );
+
+    f_less_or_equal i_floe_02
+    (
+        .a   ( unsorted [0]        ),
+        .b   ( unsorted [2]        ),
+        .res ( u0_less_or_equal_u2 ),
+        .err ( err_02              )
+    );
+
+    f_less_or_equal i_floe_12
+    (
+        .a   ( unsorted [1]        ),
+        .b   ( unsorted [2]        ),
+        .res ( u1_less_or_equal_u2 ),
+        .err ( err_12              )
+    );
+
+    assign
+        err = err_01 | err_02 | err_12;      
+
+    always_comb
+        case ({u0_less_or_equal_u1, u1_less_or_equal_u2, u0_less_or_equal_u2})
+        3'b000:     { sorted[0], sorted[1], sorted[2] } = { unsorted[2], unsorted[1], unsorted[0] };
+        3'b010:     { sorted[0], sorted[1], sorted[2] } = { unsorted[1], unsorted[2], unsorted[0] };
+        3'b011:     { sorted[0], sorted[1], sorted[2] } = { unsorted[1], unsorted[0], unsorted[2] };
+        3'b100:     { sorted[0], sorted[1], sorted[2] } = { unsorted[2], unsorted[0], unsorted[1] };
+        3'b101:     { sorted[0], sorted[1], sorted[2] } = { unsorted[0], unsorted[2], unsorted[1] };
+        default:    sorted = unsorted;
+        endcase
+        
 endmodule

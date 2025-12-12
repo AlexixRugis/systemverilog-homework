@@ -53,4 +53,16 @@ module signed_or_unsigned_mul
   output [2 * n - 1:0] res
 );
 
+  wire signed [n-1:0] a_signed;
+  wire signed [n-1:0] b_signed;
+  assign a_signed = a;
+  assign b_signed = b;
+  
+  wire signed [2*n-1:0] signed_prod;
+  assign signed_prod = a_signed * b_signed;
+  wire [2*n-1:0] unsigned_prod;
+  assign unsigned_prod = a * b;
+  
+  assign res = signed_mul ? signed_prod : unsigned_prod;
+
 endmodule
