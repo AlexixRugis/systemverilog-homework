@@ -24,5 +24,19 @@ module conv_last_to_first
     //
     // See README for full description of the task with timing diagram.
 
+    logic               new_packet;
+
+    assign down_data =  up_data;
+    assign down_valid = up_valid;
+    assign down_first = new_packet & up_valid;
+    
+    always_ff @ (posedge clock) begin
+        if (reset) begin
+            new_packet <= '1;
+        end
+        else if (up_valid) begin
+            new_packet <= up_last;
+        end
+    end
 
 endmodule

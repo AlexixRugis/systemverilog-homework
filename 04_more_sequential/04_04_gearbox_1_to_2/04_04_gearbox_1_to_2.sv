@@ -27,5 +27,23 @@ module gearbox_1_to_2
     // The module should work properly with reset 'rst'
     // and valid 'vld' signals
 
+    logic               tick;
+    logic [width - 1:0] half;
+
+    assign down_data = { half, up_data };
+    assign down_vld = up_vld & tick;
+
+    always_ff @ (posedge clk) begin
+        if (rst) begin
+            tick <= '0;
+        end
+        else if (up_vld) begin
+            if (~tick) begin
+                half <= up_data;
+            end
+
+            tick <= ~tick;
+        end
+    end
 
 endmodule

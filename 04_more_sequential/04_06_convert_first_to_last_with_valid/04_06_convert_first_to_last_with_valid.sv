@@ -24,5 +24,21 @@ module conv_first_to_last_no_ready
     //
     // See README for full description of the task with timing diagram.
 
+    logic   [width-1:0] data_shifted;
+    logic               first_tick;
+
+    assign down_data =  data_shifted;
+    assign down_valid = ~first_tick & up_valid;
+    assign down_last = ~first_tick & up_first;
+
+    always_ff @ (posedge clock) begin
+        if (reset) begin
+            first_tick <= '1;
+        end
+        else if (up_valid) begin
+            first_tick <= '0;
+            data_shifted <= up_data;
+        end
+    end
 
 endmodule
