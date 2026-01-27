@@ -75,5 +75,45 @@ module detect_6_bit_sequence_using_fsm
   //
   // Hint: See Lecture 3 for details
 
+  enum logic[3:0] {
+    IDLE,
+    S0,
+    S1,
+    S2,
+    S3,
+    S4,
+    S5
+  } state, new_state;
+
+  always_comb begin
+    new_state = state;
+
+    case (state)
+    IDLE: if (a)  new_state = S0;
+    S0:   if (a)  new_state = S1;
+          else    new_state = IDLE;
+    S1:   if (~a) new_state = S2;
+    S2:   if (~a) new_state = S3;
+          else    new_state = S0;
+    S3:   if (a)  new_state = S4;
+          else    new_state = IDLE;
+    S4:   if (a)  new_state = S5;
+          else    new_state = IDLE;
+    S5:   if (a)  new_state = S1;
+          else    new_state = S2;
+    endcase
+  end
+
+  assign detected = (state == S5);
+
+  always_ff @(posedge clk) begin
+    if (rst) begin
+      state <= IDLE;
+    end
+    else begin
+      state <= new_state;
+    end
+  end
+
 
 endmodule
