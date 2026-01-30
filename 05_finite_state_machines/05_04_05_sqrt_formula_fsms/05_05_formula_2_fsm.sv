@@ -94,12 +94,12 @@ module formula_2_fsm
     always_ff @ (posedge clk) begin
         if (rst) begin
             res_vld <= '0;
+            res <= '0;
         end
         else begin
             res_vld <= (state == st_wait_a_b_c_res & isqrt_y_vld);
+            res <= isqrt_y;
         end
     end
-
-    assign res = 32'(isqrt_y);
 
 endmodule
