@@ -61,5 +61,132 @@ module formula_1_pipe_aware_fsm
     // FPGA-Systems Magazine :: FSM :: Issue ALFA (state_0)
     // You can download this issue from https://fpga-systems.ru/fsm#state_0
 
+    enum logic [1:0] {
+        ST_GET_A,
+        ST_GET_B,
+        ST_GET_C
+    } in_state, new_in_state;
+
+    enum logic [1:0] {
+        ST_PUT_A,
+        ST_PUT_B,
+        ST_PUT_C
+    } out_state, new_out_state;
+
+    logic [31:0]        out_sum;
+    logic               out_vld;
+
+    logic [31:0]        b_stage_2;
+    logic [31:0]        c_stage_2;
+    logic               c_stage_2_vld;
+    logic [31:0]        c_stage_3;
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            c_stage_2_vld <= '0;
+        end
+        else begin
+            c_stage_2_vld <= arg_vld;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (arg_vld) begin
+            b_stage_2 <= b;
+            c_stage_2 <= c;
+        end
+        if (c_stage_2_vld) begin
+            c_stage_3 <= c_stage_2;
+        end
+    end
+
+    always_comb begin
+        new_in_state = in_state;
+        isqrt_x = 'x;
+        isqrt_x_vld = '0;
+        
+        case(in_state)
+        ST_GET_A: begin
+            if (arg_vld) begin
+                new_in_state = ST_GET_B;
+                isqrt_x = a;
+                isqrt_x_vld = '1;
+            end
+        end
+        ST_GET_B: begin
+            new_in_state = ST_GET_C;
+            isqrt_x = b_stage_2;
+            isqrt_x_vld = '1;
+        end
+        ST_GET_C: begin
+            new_in_state = ST_GET_A;
+            isqrt_x = c_stage_3;
+            isqrt_x_vld = '1;
+        end
+        endcase
+    end
+
+    always_comb begin
+        new_out_state = out_state;
+
+        case(out_state)
+        ST_PUT_A: begin
+            if (isqrt_y_vld) begin
+                new_out_state = ST_PUT_B;
+            end
+        end
+        ST_PUT_B: begin
+            if (isqrt_y_vld) begin
+                new_out_state = ST_PUT_C;
+            end
+        end
+        ST_PUT_C: begin
+            if (isqrt_y_vld) begin
+                new_out_state = ST_PUT_A;
+            end
+        end
+        endcase
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            out_vld <= '0;
+        end
+        else begin
+            case (out_state)
+            ST_PUT_A: begin
+                out_vld <= '0;
+                if (isqrt_y_vld) begin
+                    out_sum <= isqrt_y;
+                end
+            end
+            ST_PUT_B: begin
+                if (isqrt_y_vld) begin
+                    out_sum <= out_sum + isqrt_y;
+                end
+            end
+            ST_PUT_C: begin
+                if (isqrt_y_vld) begin
+                    out_sum <= out_sum + isqrt_y;
+                    out_vld <= '1;
+                end
+            end
+            endcase
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            in_state <= ST_GET_A;
+            out_state <= ST_PUT_A;
+        end
+        else begin
+            in_state <= new_in_state;
+            out_state <= new_out_state;
+        end
+    end
+
+    assign res = out_sum;
+    assign res_vld = out_vld;
 
 endmodule
