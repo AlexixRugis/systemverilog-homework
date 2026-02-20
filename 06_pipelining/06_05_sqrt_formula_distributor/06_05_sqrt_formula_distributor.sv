@@ -43,5 +43,103 @@ module sqrt_formula_distributor
     // Instantiate sufficient number of "formula_1_impl_1_top", "formula_1_impl_2_top",
     // or "formula_2_top" modules to achieve desired performance.
 
+    localparam N = 50;
+
+    logic [N - 1:0] comp_vld;
+    logic [31:0]    comp_res [0:N - 1];
+    logic [N - 1:0] cnt;
+
+    logic [N - 1:0] vld_delayed;
+    logic [31:0]    a_delayed [0:N-1];
+    logic [31:0]    b_delayed [0:N-1];
+    logic [31:0]    c_delayed [0:N-1];
+
+    genvar i;
+    generate
+        for (i = 0; i < N; i++) begin
+            if (formula == 1 && impl == 1)
+            begin : if_1_1
+                formula_1_impl_1_top i_formula_1_impl_1_top (
+                    .clk(clk),
+                    .rst(rst),
+                    
+                    .arg_vld(vld_delayed[i]),
+                    .a(a_delayed[i]),
+                    .b(b_delayed[i]),
+                    .c(c_delayed[i]),
+                    .res_vld(comp_vld[i]),
+                    .res(comp_res[i])
+                );
+            end
+            else if (formula == 1 && impl == 2)
+            begin : if_1_2
+                formula_1_impl_2_top i_formula_1_impl_2_top (
+                    .clk(clk),
+                    .rst(rst),
+                    
+                    .arg_vld(vld_delayed[i]),
+                    .a(a_delayed[i]),
+                    .b(b_delayed[i]),
+                    .c(c_delayed[i]),
+                    .res_vld(comp_vld[i]),
+                    .res(comp_res[i])
+                );
+            end
+            else
+            begin : if_else
+                formula_2_top        i_formula_2_top        (
+                    .clk(clk),
+                    .rst(rst),
+                    
+                    .arg_vld(vld_delayed[i]),
+                    .a(a_delayed[i]),
+                    .b(b_delayed[i]),
+                    .c(c_delayed[i]),
+                    .res_vld(comp_vld[i]),
+                    .res(comp_res[i])
+                );
+            end
+        end
+    endgenerate
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            vld_delayed <= '0;
+        end
+        else begin
+            vld_delayed <= cnt & {N{arg_vld}};
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        for (int i = 0; i < N; i++) begin
+            if (arg_vld & cnt[i]) begin
+                a_delayed[i] <= a;
+                b_delayed[i] <= b;
+                c_delayed[i] <= c;
+            end
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if (rst) begin
+            cnt <= {{(N-1){1'b0}}, 1'b1};
+        end
+        else if (arg_vld) begin
+            cnt <= { cnt[N - 2:0], cnt[N-1] };
+        end
+    end
+
+    logic [31:0] res_comb;
+
+    always_comb begin
+        res_comb = '0;
+        for (int i = 0; i < N; i++) begin
+            res_comb |= comp_res[i] & {32{comp_vld[i]}};
+        end
+    end
+
+    assign res_vld = |comp_vld;
+    assign res = res_comb;
 
 endmodule
