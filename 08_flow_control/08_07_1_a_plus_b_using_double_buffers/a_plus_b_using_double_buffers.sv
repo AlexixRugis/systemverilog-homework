@@ -74,6 +74,14 @@ module a_plus_b_using_double_buffers
     // assign a_down_ready = ...
     // assign b_down_ready = ...
 
+    wire               sum_up_valid = a_down_valid & b_down_valid;
+    wire               sum_up_ready;
+    wire [width - 1:0] sum_up_data  = a_down_data + b_down_data;
+
+    wire               sum_handshake = sum_up_valid & sum_up_ready;
+
+    assign a_down_ready = ~a_down_valid | sum_handshake;
+    assign b_down_ready = ~b_down_valid | sum_handshake;
 
     //------------------------------------------------------------------------
 

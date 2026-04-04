@@ -28,5 +28,30 @@ module convert_first_to_last_with_flow_control
     // The module should respect and set correct valid and ready signals
     // to control flow from the upstream and to the downstream.
 
+    logic [width-1:0] data_shifted;
+    logic first_tick;
+
+    logic up_ready_internal;
+    assign up_ready_internal = down_ready;
+
+    logic handshake;
+    assign handshake = up_valid & up_ready;
+
+    always_ff @(posedge clock or posedge reset) begin
+        if (reset) begin
+            first_tick <= 1'b1;
+        end
+        else begin
+            if (handshake) begin
+                first_tick <= 1'b0;
+                data_shifted <= up_data;
+            end
+        end
+    end
+
+    assign up_ready = up_ready_internal;
+    assign down_valid = up_valid & ~first_tick;
+    assign down_data = data_shifted;
+    assign down_last = up_first;
 
 endmodule
