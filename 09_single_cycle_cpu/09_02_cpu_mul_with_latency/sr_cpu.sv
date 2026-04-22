@@ -29,8 +29,12 @@ module sr_cpu
     wire        pcSrc;
     wire        regWrite;
     wire        aluSrc;
-    wire        wdSrc;
+    wire  [1:0] wdSrc;
     wire  [2:0] aluControl;
+    wire        mduControl;
+    wire        mduResValid;
+    wire        stall;
+    wire        needStall = (~stall & mduControl) | (stall & ~mduResValid);
 
     // instruction decode wires
 
@@ -55,8 +59,20 @@ module sr_cpu
     (
         .clk      ( clk       ),
         .rst      ( rst       ),
+        .en       ( ~needStall    ),
         .d        ( pcNext    ),
         .q        ( pc        )
+    );
+
+    // stall control
+
+    register_with_rst_and_en_1bit r_stall
+    (
+        .clk      ( clk       ),
+        .rst      ( rst       ),
+        .en       ( 1'b1      ),
+        .d        ( needStall ),
+        .q        ( stall     )
     );
 
     // program memory access
@@ -98,8 +114,7 @@ module sr_cpu
         .rd1        ( rd1         ),
         .rd2        ( rd2         ),
         .wd3        ( wd3         ),
-        .we3        ( regWrite
-        )
+        .we3        ( regWrite    )
     );
 
     // alu
@@ -116,9 +131,26 @@ module sr_cpu
         .result     ( aluResult   )
     );
 
+    wire [31:0] mduResult;
+    wire mduInValid = mduControl & ~stall;
+
+    sr_mdu mdu
+    (
+        .clk(clk),
+        .rst(rst),
+        
+        .srcA(rd1),
+        .srcB(srcB),
+        .result(mduResult),
+
+        .i_vld(mduInValid),
+        .o_vld(mduResValid)
+    );
+
 
     assign wd3 =
-                wdSrc ? immU : aluResult;
+                wdSrc[0] ? immU : 
+                wdSrc[1] ? mduResult : aluResult;
 
     // control
 
@@ -132,11 +164,30 @@ module sr_cpu
         .regWrite   ( regWrite    ),
         .aluSrc     ( aluSrc      ),
         .wdSrc      ( wdSrc       ),
-        .aluControl ( aluControl  )
+        .aluControl ( aluControl  ),
+        .mduControl ( mduControl  )
     );
 
     // debug register access
 
     assign regData = (regAddr != '0) ? rd0 : pc;
+
+endmodule
+
+module register_with_rst_and_en_1bit
+(
+    input               clk,
+    input               rst,
+    input               en,
+    input               d,
+    output logic        q
+);
+    // Original register width is fixed, i need just one bit
+
+    always_ff @ (posedge clk)
+        if (rst)
+            q <= '0;
+        else if (en)
+            q <= d;
 
 endmodule

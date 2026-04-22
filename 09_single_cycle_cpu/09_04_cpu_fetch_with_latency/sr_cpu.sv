@@ -25,8 +25,10 @@ module sr_cpu
 );
     // control wires
 
+    reg         imDataVld;
     wire        aluZero;
     wire        pcSrc;
+    wire        regFileWe;
     wire        regWrite;
     wire        aluSrc;
     wire        wdSrc;
@@ -56,6 +58,7 @@ module sr_cpu
     (
         .clk      ( clk       ),
         .rst      ( rst       ),
+        .en       ( imDataVld ),
         .d        ( pcNext    ),
         .q        ( pc        )
     );
@@ -65,6 +68,15 @@ module sr_cpu
 
     assign imAddr = pc >> 2;
     wire [31:0] instr = imData;
+
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            imDataVld <= 1'b0;
+        end
+        else begin
+            imDataVld <= ~imDataVld;
+        end
+    end
 
     // instruction decode
 
@@ -89,6 +101,8 @@ module sr_cpu
     wire [31:0] rd2;
     wire [31:0] wd3;
 
+    assign regFileWe = regWrite & imDataVld;
+
     sr_register_file i_rf
     (
         .clk        ( clk                  ),
@@ -100,8 +114,7 @@ module sr_cpu
         .rd1        ( rd1                  ),
         .rd2        ( rd2                  ),
         .wd3        ( wd3                  ),
-        .we3        ( regWrite
-        )
+        .we3        ( regFileWe             )
     );
 
     // alu
